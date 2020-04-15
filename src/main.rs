@@ -2,32 +2,85 @@ use std::net::TcpListener;
 use std::io::{Read, Write, ErrorKind};
 use std::fs::File;
 use std::io;
+use std::error::Error;
 
-fn main() {
-    match run() {
-        Ok(()) => {}
+fn main() -> Result<(), Box<dyn Error>> {
+    let result = run();
+    return match result {
+        Ok(()) => Ok(()),
         Err(error) => {
             match error.kind() {
                 ErrorKind::AddrInUse => {
-                    println!("port 7878 in use!!!");
+                    println!("* port 7878 in use!!! \n\trecoverable err : {}", error);
                     // error handling code should follow
                 }
                 ErrorKind::NotFound => {
-                    println!("file not found");
-                    // error handling code should follow
+                    println!("* file not found : \n\tunrecoverable err : {}", error);
+                    // panic code should follow
+                    panic!("unrecoverable error: {}", error);
                 }
-                _ => { println!("error ${:?}", error.kind())}
+                _ => {
+                    panic!("unrecoverable error: {}", error);
+                }
             }
+            Err(Box::new(error))
         }
-    }
+    };
+
+    // return match run().map_err(|error| {
+    //     return match error.kind() {
+    //         ErrorKind::AddrInUse => {
+    //             println!("* port 7878 in use!!! \n\trecoverable err : {}", &error);
+    //             // error handling code should follow
+    //             error
+    //         }
+    //         ErrorKind::NotFound => {
+    //             println!("* file not found : \n\tunrecoverable err : {}", &error);
+    //             // panic code should follow
+    //             panic!("unrecoverable error: {}", error);
+    //         }
+    //         _ => {
+    //             panic!("error ${:?}", error.kind());
+    //         }
+    //     };
+    // }) {
+    //     Ok(()) => return {
+    //         Ok(())
+    //     },
+    //     Err(error) => Err(Box::new(error))
+    // };
+
+    // return match run() {
+    //     Ok(()) => Ok(()),
+    //     Err(error) => {
+    //         match error.kind() {
+    //             ErrorKind::AddrInUse => {
+    //                 println!("port 7878 in use!!!");
+    //                 // error handling code should follow
+    //                 Err(Box::new(error))
+    //             }
+    //             ErrorKind::NotFound => {
+    //                 println!("file not found");
+    //                 // error handling code should follow
+    //                 Err(Box::new(error))
+    //             }
+    //             _ => { println!("error ${:?}", error.kind());
+    //                 Err(Box::new(error))
+    //             }
+    //         }
+    //     }
+    // };
 }
 
 fn run() -> Result<(), io::Error> {
     let listener = match TcpListener::bind("127.0.0.1:7878") {
-       Ok(listener)  => { println!("listening at 7878!!!", ); listener }
-       Err(error) => {
-          return Err(error);
-       }
+        Ok(listener) => {
+            println!("listening at 7878!!!", );
+            listener
+        }
+        Err(error) => {
+            return Err(error);
+        }
     };
 
     for stream in listener.incoming() {
