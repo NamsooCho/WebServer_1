@@ -30,10 +30,9 @@ fn main() -> Result<(), Box<dyn Error>> {
 
 fn run() -> Result<(), io::Error> {
     let listener = TcpListener::bind("127.0.0.1:7878").map(|listener| {
-            println!("listening at 7878!!!");
-            listener
-        }
-    );
+        println!("listening at 7878!!!");
+        listener
+    });
 
     for stream in listener?.incoming() {
         let mut stream = stream.map(|stream| {
@@ -51,13 +50,57 @@ fn run() -> Result<(), io::Error> {
         };
 
         let file = File::open(filename);
-
         let mut contents = String::new();
-
         let response: String = file?.read_to_string(&mut contents).map(|_usize| { format!("{}{}", status_line, contents) }).map_err(|error| { panic!("error!!! {:?}", error) }).unwrap();
 
         let _ = stream.write(response.as_bytes()).map_err(|error| { panic!("error!!! {:?}", error) }).unwrap();
         let _ = stream.flush().map_err(|error| { panic!("error!!! {:?}", error) }).unwrap();
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::{thread, time};
+    use std::io;
+    use std::sync::mpsc;
+    use reqwest;
+
+    #[test]
+    fn test_address_in_use_error() {
+        let listener = TcpListener::bind("127.0.0.1:7878");
+        let result = super::run().map_err(|e| e.kind());
+        let expected = Err(io::ErrorKind::AddrInUse);
+        assert_eq!(expected, result);
+        drop(listener);
+    }
+
+    #[test]
+    fn test_file_not_found_error() {
+        thread::sleep(time::Duration::from_millis(2000));
+        let (sndr, rcvr) = mpsc::channel();
+        let _ = thread::spawn(move || {
+            let result = super::run();
+            return match result {
+                Ok(()) => Ok(()),
+                Err(error) => {
+                    match error.kind() {
+                        ErrorKind::AddrInUse => {
+                            let _ = sndr.send("AddrInUse");
+                        }
+                        ErrorKind::NotFound => {
+                            let _ = sndr.send("NotFound");
+                        }
+                        _ => {
+                            let _ = sndr.send("Others");
+                        }
+                    }
+                    Err(Box::new(error))
+                }
+            };
+        });
+        let _ = reqwest::get("http://127.0.0.1:7878");
+        assert_eq!("NotFound", rcvr.recv().unwrap());
+    }
 }
