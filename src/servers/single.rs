@@ -1,4 +1,4 @@
-use std::net::TcpListener;
+use std::net::{TcpListener, TcpStream};
 use std::io::{Read, Write, ErrorKind};
 use std::fs::File;
 use std::io;
@@ -45,17 +45,17 @@ pub fn single_thread_server(domain: &str, port_no: Option<u16>) -> Result<(), io
     });
 
     for stream in listener?.incoming() {
-        let mut stream = stream.map(|stream| {
+        let mut stream: TcpStream = stream.map(|stream| {
             println!("connection established!!!");
             stream
-        }).map_err(|error| { panic!("error!!! {:?}", error) }).unwrap();
+        }).map_err(|error| { panic!("error!!! {:?}", error) }).expect("connection failed");
 
         let mut buffer = [0; 512];
         let _ = stream.read(&mut buffer).map_err(|error| { panic!("error!!! {:?}", error) });
         // /*log/ */ println!("{:?}", String::from_utf8(buffer.to_vec()).unwrap());
 
-        let re = Regex::new(r"GET\s/([a-zA-Z]+)\b").unwrap();
-        let req = String::from_utf8(buffer.to_vec()).unwrap();
+        let re = Regex::new(r"GET\s/([a-zA-Z]+)\b").expect("given regular expression is not valid");
+        let req = String::from_utf8(buffer.to_vec()).expect("string slice is not valid type(which is UTF-8)");
         // /*log/ */ println!("{}", &req);
 
         let rel_url = match re.captures(&req).map(|captures| { /* println!("{:?}", captures); */ captures }) {
@@ -64,20 +64,22 @@ pub fn single_thread_server(domain: &str, port_no: Option<u16>) -> Result<(), io
         };
         // /*log/ */println!("\t* relative_url: {}", rel_url);
 
-        let filename = if rel_url == "/" { Cow::from("index.html") } else { Cow::from(format!("{}.html", String::from(rel_url))) /*(rel_url.to_string() + "index2.html").as_str()*/ };
+        let filename = if rel_url == "/" { Cow::from("./resources/servers/index.html") } else { Cow::from(format!("./resources/servers/{}.html", String::from(rel_url))) /*(rel_url.to_string() + "index2.html").as_str()*/ };
         // /*log/ */println!("filename: {}", &filename.deref());
         let (status_line, mut file) = match File::open(filename.deref()) {
             Ok(file) => { ("HTTP/1.1 200 OK\r\n\r\n", file) }
-            Err(_) => { ("HTTP/1.1 404 NOT FOUND\r\n\r\n", File::open("404.html").unwrap()) }
+            Err(_) => { ("HTTP/1.1 404 NOT FOUND\r\n\r\n", File::open("./resources/servers/404.html").expect("404.html is not found")) }
         };
         // /*log/ */println!("\t* status_line: {}", status_line);
 
         let mut contents = String::new();
-        let response: String = file.read_to_string(&mut contents).map(|_usize| { format!("{}{}", status_line, contents) }).map_err(|error| { panic!("error!!! {:?}", error); }).unwrap();
+        let response: String = file.read_to_string(&mut contents)
+            .map(|_usize| { format!("{}{}", status_line, contents) })
+            .map_err(|error| { panic!("error!!! {:?}", error); }).expect("file is not valid UTF-8");
         // /*log/ */println!("{}", response);
         //
-        let _ = stream.write(response.as_bytes()).map_err(|error| { panic!("error!!! {:?}", error) }).unwrap();
-        let _ = stream.flush().map_err(|error| { panic!("error!!! {:?}", error) }).unwrap();
+        let _ = stream.write(response.as_bytes()).map_err(|error| { panic!("error!!! {:?}", error) }).expect("failed to write stream");
+        let _ = stream.flush().map_err(|error| { panic!("error!!! {:?}", error) }).expect("failed to flush stream");
     }
     Ok(())
 }
