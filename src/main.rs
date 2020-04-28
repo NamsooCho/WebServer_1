@@ -3,12 +3,11 @@ extern crate log;
 extern crate env_logger;
 
 // mod servers;
-// mod services;
 mod services;
 
 fn main() {
-    env_logger::init();
-    // let _ = servers::run_server();
+    crate::env_logger::init();
+    // servers::run_server().expect("failed to start server");
     // services::process_wordcount();
     services::provide_text();
 }

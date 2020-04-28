@@ -5,23 +5,13 @@ use std::iter::Iterator;
 
 pub fn process_wordcount() {
     let contents = read_file("./resources/services/pride-and-prejudice.txt");
-    debug!("{:?}", contents);
-
     let str: String = filter_chars_and_normalize(contents);
-    debug!("{}", str);
-
     let word_list = remove_stop_words(str, "./resources/services/stop_words.txt");
-    debug!("{:?}", word_list);
-
     let word_freq = frequencies(word_list);
-    debug!("{:?}", word_freq);
-
     let sorted_pair = sort(&word_freq);
-    debug!("{:?}", sorted_pair);
-
     for p in sorted_pair.iter().enumerate() {
         if p.0 <= 25 {
-            info!("{:?} - {:?}", (*p.1).1, (*p.1).0);
+            println!("{:?} - {:?}", (*p.1).1, (*p.1).0);
         }
     }
 }
