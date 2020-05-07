@@ -1,28 +1,17 @@
 use std::fs::File;
 use std::io::Read;
 use std::collections::{BTreeMap};
-use std::borrow::Borrow;
 use std::iter::Iterator;
 
-pub fn process() {
-    let contents = read_file("./resources/wc/pride-and-prejudice.txt");
-    debug!("{:?}", contents);
-
+pub fn process_wordcount() {
+    let contents = read_file("./resources/services/pride-and-prejudice.txt");
     let str: String = filter_chars_and_normalize(contents);
-    debug!("{}", str);
-
-    let word_list = remove_stop_words(str, "./resources/wc/stop_words.txt");
-    debug!("{:?}", word_list);
-
+    let word_list = remove_stop_words(str, "./resources/services/stop_words.txt");
     let word_freq = frequencies(word_list);
-    debug!("{:?}", word_freq);
-
     let sorted_pair = sort(&word_freq);
-    debug!("{:?}", sorted_pair);
-
     for p in sorted_pair.iter().enumerate() {
         if p.0 <= 25 {
-            info!("{:?} - {:?}", (*p.1).1, (*p.1).0);
+            println!("{:?} - {:?}", (*p.1).1, (*p.1).0);
         }
     }
 }
@@ -49,8 +38,8 @@ fn filter_chars_and_normalize(contents: String) -> String {
 
 fn remove_stop_words(str: String, filename: &str) -> Vec<String> {
     let contents = read_file(filename);
-    let mut stop_words: Vec<&str> = contents.split(",").collect::<Vec<&str>>();
-    let alphabets: Vec<&str> = "abcdefghijilmnopqrstuvwxyz".split("").filter(|x| x.len() != 0 ).collect::<Vec<&str>>();
+    let stop_words: Vec<&str> = contents.split(",").collect::<Vec<&str>>();
+    let alphabets: Vec<&str> = "abcdefghijklmnopqrstuvwxyz".split("").filter(|x| x.len() != 0 ).collect::<Vec<&str>>();
     let stop_words_with_alphabets = [&stop_words[..], &alphabets[..]].concat();
 
     let words: Vec<&str> = str.split(" ").collect::<Vec<&str>>();
